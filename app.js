@@ -122,7 +122,7 @@
     function writeToResultsPanel(obj,path){
         const ul = document.querySelector(path);
         let string = "URL:";
-        Object.values(obj).forEach((prop)=>{string += ", " + prop});
+        Object.values(obj).forEach((prop)=>{string += prop + ","});
         let li = `<li class="speedURL">${string}</li>`;
         
         ul.innerHTML += li;
