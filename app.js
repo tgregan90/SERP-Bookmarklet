@@ -1,13 +1,28 @@
-
 (function(){
     // Build menu and append buttons
     let searchForm = document.querySelector("#searchform");
+    const apiKey = '';
     const menu = `
     <ul style="margin-top:20px">
         <li><a href="#" id="getSpeed">Get Load Speeds</a></li>
         <li><a href="#" id="getResults" onclick="">Print Results</a></li>
         <li><a href="#" id="getMJS" onclick="">Get Majestic Data</a></li>
-    </ul>`
+    </ul>
+    <div id="resultsPanel">
+        <ul id="speedList"></ul>
+    </div>
+    <style>
+        #resultsPanel{
+            height: 500px;
+            background-color: lightgray;
+            width:100vw;
+            margin: 0px auto;
+        }
+        .speedURL{
+            list-style-type: none;
+        }
+    </style>
+    `
     searchForm.innerHTML += menu;
 
     // Create an array with all the organic results
@@ -21,26 +36,56 @@
             continue
         }
         const obj = {}
-        obj.url = node.querySelector("a").getAttribute("href").toString();
+        obj.url = anchorNode.getAttribute("href").toString();
+        const buttons = `
+        <style>
+            .SERPListingContainer{
+                display:block;
+            }
+            .SERPListing{
+                display: flex;
+                flex-direction: row;
+            }
+            .SERPListing li {
+               
+                list-style-type: none;
+                background-color: yellow;
+                padding: 0px;
+                padding-right: 20px;
+            }
+            .SERPListing li a {
+                color: black;
+                font-size: 16px;
+            }
+        </style>
+        <br />
+        <div class="SERPListingContainer">
+            <ul class="SERPListing">
+                <li class="getSpeedURL"><a href="#" onclick="getSpeed()">Get Speed</a></li>
+                <li>|</li>
+                <li class="getSpeedLinks"><a href="#" onclick="getMajesticData()">Get Links</a></li>
+            </ul>
+        </div>    
+        `;
+        anchorNode.insertAdjacentHTML("beforebegin",buttons)
         values.push(obj);
     }
-
     function getSpeed(){
-        if(!document.querySelector("#getSpeedButton")){
-            searchForm.querySelector("#getSpeed").innerHTML += `
-            <div style="margin:20px 0px" id="getSpeedButton">
-                <form action="https://batchspeed.com/test/" method="post">
-                    <label for="urls" style="display:none">Speed Check</label>
-                    <textarea name="urls" id="urls" type="textarea" style="display:none">
-                    </textarea>
-                    <button type="submit">Get Speeds</button>
-                </form>
-            </div>`
-        const textArea = document.querySelector("#urls");
-        values.forEach(urls=>{
-            textArea.value += urls.url + "\n";
-        })
-        }
+        const result = [];
+        values.forEach(urlObj=>{
+            const call = buildCall(urlObj.url);
+            fetch(call)
+            .then(response => response.json())
+            .then(data => {
+                const obj = {};
+                obj.url = data.lighthouseResult.requestedUrl;
+                obj.cls = data.lighthouseResult.audits["cumulative-layout-shift"].displayValue; 
+                obj.lcp = data.lighthouseResult.audits["largest-contentful-paint"].displayValue;
+                result.push(obj);
+              console.log(obj);
+              writeToResultsPanel(obj,"#speedList");
+            });
+        });
     }
     function printResults(){
         let string = "";
@@ -51,6 +96,9 @@
         })
         console.log(string);
         alert(string)
+    }
+    function buildCall(url,strategy){
+        return `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${url.toString()}&fields=loadingExperience,lighthouseResult&key=${apiKey}&strategy=mobile`
     }
     function getMajesticData(){
         if(!document.querySelector("#getMJSButton")){
@@ -70,6 +118,14 @@
             textArea.value += urls.url + "\n";
         })
     }
+    }
+    function writeToResultsPanel(obj,path){
+        const ul = document.querySelector(path);
+        let string = "URL:";
+        Object.values(obj).forEach((prop)=>{string += ", " + prop});
+        let li = `<li class="speedURL">${string}</li>`;
+        
+        ul.innerHTML += li;
     }
     document.querySelector("#getSpeed").addEventListener("click",getSpeed);
     document.querySelector("#getResults").addEventListener("click",printResults);
